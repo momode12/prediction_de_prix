@@ -1,3 +1,19 @@
 # Modèles ML
 *.pkl
 flask/app/ml/model.pkl
+# Environnements virtuels
+venv/
+env/
+.venv/
+ENV/
+.env
+.env.*
+__pycache__/
+*.py[cod]
+*$py.class
+.vscode/
+.idea/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
