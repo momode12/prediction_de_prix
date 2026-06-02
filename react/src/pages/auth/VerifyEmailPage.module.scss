@@ -1,0 +1,4 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+.container { @include flex-center; min-height: 80vh; padding: $spacing-lg; }
+.card { @include card; width: 100%; max-width: 500px; text-align: center; h2 { margin-bottom: $spacing-lg; } }

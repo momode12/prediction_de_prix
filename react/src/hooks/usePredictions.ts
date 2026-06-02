@@ -1,28 +1,60 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Prediction, PredictionInput, PredictionUpdate } from '../types';
+import { Prediction, PredictionInput, PredictionUpdate } from '../types';
 import { predictionService } from '../services/prediction.service';
 
 export const usePredictions = () => {
+  // ✅ On initialise isLoading à true directement
   const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
 
-  // Charger toutes les prédictions
-  const fetchPredictions = useCallback(async () => {
-    setIsLoading(true);
+  // Fonction interne pour charger les données (ne gère pas le isLoading initial)
+  const loadPredictions = useCallback(async () => {
     setError(null);
-    
     try {
       const response = await predictionService.getAll();
       setPredictions(response.predictions);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors du chargement des prédictions');
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // On passe à false à la fin
     }
   }, []);
 
-  // Créer une nouvelle prédiction
+  // ✅ Appel initial au montage SANS appeler setIsLoading(true)
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchInitial = async () => {
+      try {
+        const response = await predictionService.getAll();
+        if (isMounted) {
+          setPredictions(response.predictions);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err.response?.data?.message || 'Erreur lors du chargement');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchInitial();
+
+    return () => {
+      isMounted = false; // Nettoyage pour éviter les fuites de mémoire
+    };
+  }, []);
+
+  // Fonction exposée pour rafraîchir manuellement (ex: après un delete)
+  const fetchPredictions = async () => {
+    setIsLoading(true); // Ici c'est OK car ce n'est pas dans un useEffect
+    await loadPredictions();
+  };
+
   const createPrediction = async (data: PredictionInput): Promise<Prediction | null> => {
     setIsLoading(true);
     setError(null);
@@ -39,7 +71,6 @@ export const usePredictions = () => {
     }
   };
 
-  // Modifier une prédiction
   const updatePrediction = async (id: string, data: PredictionUpdate): Promise<Prediction | null> => {
     setIsLoading(true);
     setError(null);
@@ -56,7 +87,6 @@ export const usePredictions = () => {
     }
   };
 
-  // Supprimer une prédiction
   const deletePrediction = async (id: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -73,7 +103,6 @@ export const usePredictions = () => {
     }
   };
 
-  // Supprimer toutes les prédictions
   const deleteAllPredictions = async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -89,11 +118,6 @@ export const usePredictions = () => {
       setIsLoading(false);
     }
   };
-
-  // Charger automatiquement au montage
-  useEffect(() => {
-    fetchPredictions();
-  }, [fetchPredictions]);
 
   return {
     predictions,

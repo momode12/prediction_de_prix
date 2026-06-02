@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User, LoginCredentials, RegisterCredentials } from '../types';
 import { authService } from '../services/auth.service';
 
@@ -13,7 +13,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -43,51 +43,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     const response = await authService.login(credentials);
-    
+
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('refresh_token', response.refresh_token);
     localStorage.setItem('user', JSON.stringify(response.user));
-    
-    setUser(response.user);
-  };
 
-  const register = async (credentials: RegisterCredentials) => {
+    setUser(response.user);
+  }, []);
+
+  const register = useCallback(async (credentials: RegisterCredentials) => {
     await authService.register(credentials);
     // Après l'inscription, l'utilisateur doit vérifier son email
     // On ne le connecte pas automatiquement
-  };
+  }, []);
 
   const logout = useCallback(() => {
     authService.logout();
     setUser(null);
   }, []);
 
-  const updateUser = (updatedUser: User) => {
+  const updateUser = useCallback((updatedUser: User) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const response = await authService.getProfile();
       updateUser(response.user);
     } catch (error) {
       console.error('Erreur lors du rafraîchissement du profil:', error);
     }
-  };
+  }, [updateUser]);
 
-  const value: AuthContextType = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    register,
-    logout,
-    updateUser,
-    refreshUser,
-  };
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      login,
+      register,
+      logout,
+      updateUser,
+      refreshUser,
+    }),
+    [user, isLoading, login, register, logout, updateUser, refreshUser],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

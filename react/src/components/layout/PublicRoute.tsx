@@ -7,5 +7,5 @@ export const PublicRoute: React.FC = () => {
 
   if (isLoading) return <div className="container mt-5 text-center">Chaîrgement...</div>;
 
-  return !isAuthenticated ? <Outlet /> : <Navigate to="/predictions" replace />;
+  return isAuthenticated ? <Navigate to="/predictions" replace /> : <Outlet />;
 };
