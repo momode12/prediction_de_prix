@@ -1,19 +1,29 @@
-# Modèles ML
-*.pkl
-flask/app/ml/model.pkl
-# Environnements virtuels
-venv/
-env/
-.venv/
-ENV/
+# Environnement
 .env
-.env.*
+venv/
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
+*.pyo
+
+# ML (fichiers lourds — à gérer via DVC ou stockage externe)
+app/ml/model.pkl
+app/ml/encoders.pkl
+app/ml/scaler.pkl
+app/ml/features.pkl
+
+# IDE
 .vscode/
 .idea/
-.pytest_cache/
-.coverage
-htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
 *.log
+logs/
+
+# Distribution
+dist/
+build/
+*.egg-info/
