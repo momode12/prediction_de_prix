@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from app.config import config_by_name
 from app.extensions import db, jwt, bcrypt, mail
+from app.init_db import init_db          # ← ajouter
 
 load_dotenv()
 
@@ -18,7 +19,14 @@ def create_app(config_name: str = "dev") -> Flask:
     jwt.init_app(app)
     bcrypt.init_app(app)
     mail.init_app(app)
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    CORS(app,
+         resources={r"/*": {
+             "origins":             ["http://localhost:3000", "http://localhost:5173"],
+             "methods":             ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers":       ["Content-Type", "Authorization"],
+             "expose_headers":      ["Content-Type", "Authorization"],
+             "supports_credentials": True,
+         }})
 
     # Swagger
     Swagger(app, template={
@@ -51,5 +59,8 @@ def create_app(config_name: str = "dev") -> Flask:
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(oauth_bp, url_prefix="/auth/oauth")
     app.register_blueprint(prediction_bp, url_prefix="/api")
+
+    # ── Init collections MongoDB        ← ajouter
+    init_db(app)
 
     return app
