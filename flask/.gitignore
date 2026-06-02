@@ -1,0 +1,3 @@
+# Modèles ML
+*.pkl
+flask/app/ml/model.pkl
