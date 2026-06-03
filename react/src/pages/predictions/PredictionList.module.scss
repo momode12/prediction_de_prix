@@ -1,5 +1,5 @@
-@import '../../styles/variables';
-@import '../../styles/mixins';
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
 
 .container { @include container; padding-top: $spacing-2xl; max-width: 1000px; }
 .header { @include flex-between; margin-bottom: $spacing-xl; h2 { margin: 0; } }

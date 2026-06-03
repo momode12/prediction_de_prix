@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Alert.module.scss';
+import styles from "./Alert.module.scss";
 
 interface AlertProps {
   type: 'success' | 'error' | 'info';

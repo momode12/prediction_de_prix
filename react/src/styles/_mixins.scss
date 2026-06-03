@@ -1,4 +1,5 @@
-@import 'variables';
+@use 'variables' as *; 
+@use 'sass:color';
 
 // Flexbox
 @mixin flex-center {
@@ -82,7 +83,7 @@
   color: $white;
   
   &:hover:not(:disabled) {
-    background-color: darken($error, 10%);
+    background-color: color.adjust($error, $lightness: -10%);
   }
 }
 

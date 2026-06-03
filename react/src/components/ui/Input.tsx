@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Input.module.scss';
+import styles from "./Input.module.scss";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> {
   label?: string;
@@ -9,7 +9,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLSe
 }
 
 export const Input: React.FC<InputProps> = ({ label, error, as = 'input', options, className, ...props }) => {
-  const Component = as === 'select' ? 'select' : as === 'textarea' ? 'textarea' : 'input';
+  let Component: 'input' | 'select' | 'textarea' = 'input';
+
+  if (as === 'select') {
+    Component = 'select';
+  } else if (as === 'textarea') {
+    Component = 'textarea';
+  }
   
   return (
     <div className={`${styles.inputGroup} ${className || ''}`}>

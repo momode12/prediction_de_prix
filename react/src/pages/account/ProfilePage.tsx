@@ -7,8 +7,11 @@ import { Alert } from '../../components/ui/Alert';
 import styles from './ProfilePage.module.scss';
 
 export const ProfilePage: React.FC = () => {
-  const { user, updateUser, logout } = useAuth();
-  const [formData, setFormData] = useState({ username: user?.username || '', email: user?.email || '' });
+  const auth = useAuth() as { user?: any; updateUser?: (user: any) => void; logout?: () => void };
+  const user = auth?.user;
+  const updateUser = auth?.updateUser;
+  const logout = auth?.logout;
+  const [formData, setFormData] = useState({ username: user?.username ?? '', email: user?.email ?? '' });
   const [pwData, setPwData] = useState({ old_password: '', new_password: '' });
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -17,7 +20,7 @@ export const ProfilePage: React.FC = () => {
     e.preventDefault();
     try {
       const res = await authService.updateProfile(formData);
-      updateUser(res.user);
+      updateUser?.(res.user);
       setMsg('Profil mis à jour.');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur');
@@ -39,7 +42,7 @@ export const ProfilePage: React.FC = () => {
     if (globalThis.confirm('Êtes-vous sûr ? Cette action est irréversible et supprimira toutes vos prédictions.')) {
       try {
         await authService.deleteAccount();
-        logout();
+        logout?.();
         globalThis.location.href = '/login';
       } catch (err: any) {
         setError(err.response?.data?.message || 'Erreur');

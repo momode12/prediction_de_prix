@@ -4,7 +4,14 @@ import { useAuth } from '../../hooks/useAuth';
 import styles from './Navbar.module.scss';
 
 export const Navbar: React.FC = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const auth = useAuth() as {
+    user?: { username?: string };
+    isAuthenticated?: boolean;
+    logout?: () => void;
+  };
+  const user = auth.user;
+  const isAuthenticated = auth.isAuthenticated ?? false;
+  const logout = auth.logout ?? (() => {});
   const navigate = useNavigate();
 
   const handleLogout = () => {

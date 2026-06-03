@@ -11,14 +11,18 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const auth = useAuth() as { login?: (credentials: { email: string; password: string }) => Promise<void> } | undefined;
+  const login = auth?.login;
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
     try {
+      if (!login) {
+        throw new Error('Service d\'authentification indisponible');
+      }
       await login({ email, password });
       navigate('/predictions');
     } catch (err: any) {
@@ -37,7 +41,7 @@ export const LoginPage: React.FC = () => {
           <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
           <Input label="Mot de passe" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
           <Button type="submit" isLoading={isLoading} className={styles.submitBtn}>Se connecter</Button>
-        </a>
+        </form>
         <p className={styles.footer}>
           Pas encore de compte ? <Link to="/register">S'inscrire</Link>
         </p>

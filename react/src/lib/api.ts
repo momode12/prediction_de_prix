@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000';
 
@@ -18,12 +18,12 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error: AxiosError) => Promise.reject(error)
 );
 
 // Intercepteur de réponse : gérer le refresh token
 api.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
@@ -54,13 +54,13 @@ api.interceptors.response.use(
           // Refresh échoué → déconnexion
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
+          globalThis.location.href = '/login';
+          throw refreshError;
         }
       }
     }
 
-    return Promise.reject(error);
+    throw error;
   }
 );
 

@@ -1,6 +1,5 @@
-@import '../../styles/variables';
-@import '../../styles/mixins';
-
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
 .container { @include container; padding-top: $spacing-2xl; max-width: 900px; }
 .card { @include card; h2 { margin-bottom: $spacing-xl; text-align: center; } }
 

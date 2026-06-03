@@ -1,19 +1,7 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
-import type { User, LoginCredentials, RegisterCredentials } from '../types';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { User, LoginCredentials, RegisterCredentials } from '../types';
 import { authService } from '../services/auth.service';
-
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (credentials: RegisterCredentials) => Promise<void>;
-  logout: () => void;
-  updateUser: (user: User) => void;
-  refreshUser: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from './auth-context';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -23,7 +11,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Vérifier si l'utilisateur est déjà connecté au chargement
+  // 1. Initialisation au montage
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('access_token');
@@ -33,7 +21,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           setUser(JSON.parse(storedUser));
         } catch {
-          // Si le user stocké est corrompu, on le supprime
           localStorage.removeItem('user');
         }
       }
@@ -43,20 +30,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initAuth();
   }, []);
 
+  // 2. Toutes les fonctions sont mémoïsées avec useCallback pour rester stables
   const login = useCallback(async (credentials: LoginCredentials) => {
     const response = await authService.login(credentials);
-
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('refresh_token', response.refresh_token);
     localStorage.setItem('user', JSON.stringify(response.user));
-
     setUser(response.user);
   }, []);
 
   const register = useCallback(async (credentials: RegisterCredentials) => {
     await authService.register(credentials);
-    // Après l'inscription, l'utilisateur doit vérifier son email
-    // On ne le connecte pas automatiquement
   }, []);
 
   const logout = useCallback(() => {
@@ -72,25 +56,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshUser = useCallback(async () => {
     try {
       const response = await authService.getProfile();
-      updateUser(response.user);
+      setUser(response.user);
+      localStorage.setItem('user', JSON.stringify(response.user));
     } catch (error) {
       console.error('Erreur lors du rafraîchissement du profil:', error);
     }
-  }, [updateUser]);
+  }, []);
 
-  const value = useMemo<AuthContextType>(
-    () => ({
-      user,
-      isAuthenticated: !!user,
-      isLoading,
-      login,
-      register,
-      logout,
-      updateUser,
-      refreshUser,
-    }),
-    [user, isLoading, login, register, logout, updateUser, refreshUser],
-  );
+  // 3. L'objet value ne sera recalculé que si ces dépendances changent.
+  // Comme les fonctions sont stables (useCallback), il ne recalculera 
+  // réellement que lorsque 'user' ou 'isLoading' changera.
+  const value = useMemo(() => ({
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    register,
+    logout,
+    updateUser,
+    refreshUser,
+  }), [user, isLoading, login, register, logout, updateUser, refreshUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -1,6 +1,6 @@
-@import 'variables';
-@import 'mixins';
-@import 'reset';
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'reset' as *;
 
 // Classes utilitaires globales
 .container {
