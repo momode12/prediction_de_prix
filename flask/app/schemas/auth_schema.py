@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate, validates, ValidationError
+from marshmallow import Schema, fields, validate, validates, ValidationError, EXCLUDE
 from app.models.user import User
 
 
@@ -43,16 +43,13 @@ class LoginSchema(Schema):
 
 
 class UpdateUserSchema(Schema):
-    """CRUD compte — modification username ou email."""
+
+    class Meta:
+        unknown = EXCLUDE  # ← ignore email et tout champ inconnu
+
     username = fields.Str(
         validate=validate.Length(min=3, max=50)
     )
-    email = fields.Email()
-
-    @validates("email")
-    def validate_email_unique(self, value):
-        if User.objects(email=value).first():
-            raise ValidationError("Cet email est déjà utilisé.")
 
     @validates("username")
     def validate_username_unique(self, value):

@@ -136,8 +136,11 @@ def predict(current_user):
       500:
         description: Erreur modèle ML
     """
+
+    body = request.get_json() or {}
+
     try:
-        data = input_schema.load(request.get_json() or {})
+        data = input_schema.load(body)
     except ValidationError as e:
         return jsonify({"success": False, "errors": e.messages}), 400
 
@@ -147,7 +150,12 @@ def predict(current_user):
             "success": True,
             "prediction": response_schema.dump(prediction)
         }), 201
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
+        import traceback
+        print("=== ERREUR PREDICT ===")
+        print(traceback.format_exc())
         return jsonify({"success": False, "message": str(e)}), 500
 
 

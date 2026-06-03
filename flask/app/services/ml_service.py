@@ -27,62 +27,59 @@ class MLService:
     # PRÉDICTION
     # ────────────────────────────────
 
+
     @classmethod
     def predict(cls, user_id: str, input_data: dict) -> MLPrediction:
-        """
-        Prédit le prix, sauvegarde en base et retourne le document MLPrediction.
-        input_data : données validées par PredictionInputSchema
-        """
         cls._load()
 
         user = User.objects(id=user_id, is_active=True).first()
         if not user:
             raise ValueError("Utilisateur introuvable.")
 
-        # ── Mapping clés schema → clés notebook
-        mapping = {
-            "type_bien": "Type_bien",
-            "etat_bien": "Etat_bien",
-            "region": "Region",
-            "quartier": "Quartier",
-            "accessibilite": "Accessibilite",
-            "douche_position": "Douche_position",
-            "wc_position": "WC_position",
-            "garage": "Garage",
-            "jardin": "Jardin",
-            "electricite": "Electricite",
-            "eau_courante": "Eau_courante",
-        }
+        try:  # ← ajouter ce try/except
+            mapping = {
+                "type_bien": "Type_bien",
+                "etat_bien": "Etat_bien",
+                "region": "Region",
+                "quartier": "Quartier",
+                "accessibilite": "Accessibilite",
+                "douche_position": "Douche_position",
+                "wc_position": "WC_position",
+                "garage": "Garage",
+                "jardin": "Jardin",
+                "electricite": "Electricite",
+                "eau_courante": "Eau_courante",
+            }
 
-        # ── Construction de la ligne
-        row = {
-            "Surface_m2": input_data["surface_m2"],
-            "Nb_chambres": input_data["nb_chambres"],
-            "Nombre_etages": input_data["nombre_etages"],
-            "Annee_construction": input_data["annee_construction"],
-            "Prix_terrain_m2": input_data["prix_terrain_m2"],
-        }
+            row = {
+                "Surface_m2": input_data["surface_m2"],
+                "Nb_chambres": input_data["nb_chambres"],
+                "Nombre_etages": input_data["nombre_etages"],
+                "Annee_construction": input_data["annee_construction"],
+                "Prix_terrain_m2": input_data["prix_terrain_m2"],
+            }
 
-        # ── Encodage des catégorielles
-        for key_schema, key_notebook in mapping.items():
-            val = input_data[key_schema]
-            encoder = cls._encoders.get(key_notebook)
-            if encoder is None:
-                raise ValueError(f"Encodeur manquant pour {key_notebook}")
-            try:
-                row[key_notebook + "_enc"] = int(encoder.transform([val])[0])
-            except ValueError:
-                raise ValueError(f"Valeur inconnue '{val}' pour {key_notebook}")
+            for key_schema, key_notebook in mapping.items():
+                val = input_data[key_schema]
+                encoder = cls._encoders.get(key_notebook)
+                if encoder is None:
+                    raise ValueError(f"Encodeur manquant pour {key_notebook}")
+                try:
+                    row[key_notebook + "_enc"] = int(encoder.transform([val])[0])
+                except ValueError:
+                    raise ValueError(f"Valeur inconnue '{val}' pour {key_notebook}")
 
-        # ── Vecteur dans le bon ordre
-        X_input = pd.DataFrame([row])[cls._features]
+            X_input = pd.DataFrame([row])[cls._features]
+            X_scaled = cls._scaler.transform(X_input)
+            prix_log = cls._model.predict(X_scaled)[0]
+            prix_reel = int(np.exp(prix_log))
 
-        # ── Normalisation + prédiction
-        X_scaled = cls._scaler.transform(X_input)
-        prix_log = cls._model.predict(X_scaled)[0]
-        prix_reel = int(np.exp(prix_log))
+        except Exception as e:
+            import traceback
+            print("=== ERREUR ML ===")
+            print(traceback.format_exc())  # ← affiche l'erreur exacte dans le terminal
+            raise e
 
-        # ── Sauvegarde en base
         prediction = MLPrediction(
             user=user,
             label=input_data.get("label"),
@@ -106,7 +103,6 @@ class MLService:
         )
         prediction.save()
         return prediction
-
     # ────────────────────────────────
     # CRUD PRÉDICTIONS
     # ────────────────────────────────

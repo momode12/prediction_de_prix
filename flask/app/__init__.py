@@ -19,14 +19,13 @@ def create_app(config_name: str = "dev") -> Flask:
     jwt.init_app(app)
     bcrypt.init_app(app)
     mail.init_app(app)
-    CORS(app,
-         resources={r"/*": {
-             "origins":             ["http://localhost:3000", "http://localhost:5173"],
-             "methods":             ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-             "allow_headers":       ["Content-Type", "Authorization"],
-             "expose_headers":      ["Content-Type", "Authorization"],
-             "supports_credentials": True,
-         }})
+    CORS(
+        app,
+        resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    )
 
     # Swagger
     Swagger(app, template={

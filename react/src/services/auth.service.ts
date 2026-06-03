@@ -1,76 +1,166 @@
-import api from '../lib/api';
-import type {
-  AuthResponse,
-  LoginCredentials,
-  RegisterCredentials,
-  User,
-  ApiResponse,
-} from '../types';
+import api from "@/lib/api";
+import {
+  LoginPayload,
+  RegisterPayload,
+  UpdateProfilePayload,
+  ChangePasswordPayload,
+  LoginResponse,
+  RegisterResponse,
+  ProfileResponse,
+  TOKEN_KEYS,
+} from "@/types";
 
-export const authService = {
-  // Inscription
-  async register(data: RegisterCredentials): Promise<ApiResponse<{ user_id: string }>> {
-    const response = await api.post('/auth/register', data);
-    return response.data;
+const AuthService = {
+  // ════════════════════════════════════════
+  // REGISTER
+  // ════════════════════════════════════════
+  register: async (payload: RegisterPayload): Promise<RegisterResponse> => {
+    const { data } = await api.post<RegisterResponse>(
+      "/auth/register",
+      payload,
+    );
+    return data;
   },
 
-  // Connexion
-  async login(data: LoginCredentials): Promise<AuthResponse> {
-    const response = await api.post('/auth/login', data);
-    return response.data;
+  // ════════════════════════════════════════
+  // LOGIN
+  // ════════════════════════════════════════
+  login: async (payload: LoginPayload): Promise<LoginResponse> => {
+    const { data } = await api.post<LoginResponse>("/auth/login", payload);
+
+    // ── Stockage tokens + user dans localStorage
+    localStorage.setItem(TOKEN_KEYS.ACCESS, data.access_token);
+    localStorage.setItem(TOKEN_KEYS.REFRESH, data.refresh_token);
+    localStorage.setItem(TOKEN_KEYS.USER, JSON.stringify(data.user));
+
+    return data;
   },
 
-  // Rafraîchir le token
-  async refresh(refreshToken: string): Promise<{ access_token: string }> {
-    const response = await api.post('/auth/refresh', {}, {
-      headers: { Authorization: `Bearer ${refreshToken}` },
-    });
-    return response.data;
+  // ════════════════════════════════════════
+  // LOGOUT — nettoyage localStorage
+  // ════════════════════════════════════════
+  logout: (): void => {
+    localStorage.removeItem(TOKEN_KEYS.ACCESS);
+    localStorage.removeItem(TOKEN_KEYS.REFRESH);
+    localStorage.removeItem(TOKEN_KEYS.USER);
   },
 
-  // Vérifier l'email
-  async verifyEmail(token: string): Promise<ApiResponse> {
-    const response = await api.get(`/auth/verify/${token}`);
-    return response.data;
+  // ════════════════════════════════════════
+  // REFRESH TOKEN
+  // ════════════════════════════════════════
+  refresh: async (): Promise<string> => {
+    const refreshToken = localStorage.getItem(TOKEN_KEYS.REFRESH);
+    const { data } = await api.post<{ access_token: string }>(
+      "/auth/refresh",
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
+      },
+    );
+    localStorage.setItem(TOKEN_KEYS.ACCESS, data.access_token);
+    return data.access_token;
   },
 
-  // Renvoyer l'email de vérification
-  async resendVerification(): Promise<ApiResponse> {
-    const response = await api.post('/auth/resend-verification');
-    return response.data;
+  // ════════════════════════════════════════
+  // VERIFY EMAIL
+  // ════════════════════════════════════════
+  verifyEmail: async (token: string): Promise<{ message: string }> => {
+    const { data } = await api.get<{ success: boolean; message: string }>(
+      `/auth/verify/${token}`,
+    );
+    return data;
   },
 
-  // Obtenir le profil
-  async getProfile(): Promise<{ user: User }> {
-    const response = await api.get('/auth/me');
-    return response.data;
+  // ════════════════════════════════════════
+  // RESEND VERIFICATION
+  // ════════════════════════════════════════
+  resendVerification: async (email?: string): Promise<{ message: string }> => {
+    const { data } = await api.post<{ success: boolean; message: string }>(
+      "/auth/resend-verification",
+      email ? { email } : {},
+    );
+    return data;
   },
 
-  // Modifier le profil
-  async updateProfile(data: Partial<Pick<User, 'username' | 'email'>>): Promise<{ user: User }> {
-    const response = await api.patch('/auth/me', data);
-    return response.data;
+  // ════════════════════════════════════════
+  // GET PROFIL
+  // ════════════════════════════════════════
+  getProfile: async (): Promise<ProfileResponse> => {
+    const { data } = await api.get<ProfileResponse>("/auth/me");
+    return data;
   },
 
-  // Changer le mot de passe
-  async changePassword(oldPassword: string, newPassword: string): Promise<ApiResponse> {
-    const response = await api.patch('/auth/me/password', {
-      old_password: oldPassword,
-      new_password: newPassword,
-    });
-    return response.data;
+  // ════════════════════════════════════════
+  // UPDATE PROFIL
+  // ════════════════════════════════════════
+  updateProfile: async (
+    payload: UpdateProfilePayload,
+  ): Promise<ProfileResponse> => {
+    const { data } = await api.patch<ProfileResponse>("/auth/me", payload);
+
+    // ── Mettre à jour le user dans localStorage
+    const stored = localStorage.getItem(TOKEN_KEYS.USER);
+    if (stored) {
+      const current = JSON.parse(stored);
+      localStorage.setItem(
+        TOKEN_KEYS.USER,
+        JSON.stringify({ ...current, ...data.user }),
+      );
+    }
+
+    return data;
   },
 
-  // Supprimer le compte
-  async deleteAccount(): Promise<ApiResponse> {
-    const response = await api.delete('/auth/me');
-    return response.data;
+  // ════════════════════════════════════════
+  // CHANGE PASSWORD
+  // ════════════════════════════════════════
+  changePassword: async (
+    payload: ChangePasswordPayload,
+  ): Promise<{ message: string }> => {
+    const { data } = await api.patch<{ success: boolean; message: string }>(
+      "/auth/me/password",
+      payload,
+    );
+    return data;
   },
 
-  // Déconnexion (côté client uniquement)
-  logout(): void {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+  // ════════════════════════════════════════
+  // DELETE COMPTE
+  // ════════════════════════════════════════
+  deleteAccount: async (): Promise<{ message: string }> => {
+    const { data } = await api.delete<{ success: boolean; message: string }>(
+      "/auth/me",
+    );
+
+    // ── Vider localStorage après suppression
+    localStorage.removeItem(TOKEN_KEYS.ACCESS);
+    localStorage.removeItem(TOKEN_KEYS.REFRESH);
+    localStorage.removeItem(TOKEN_KEYS.USER);
+
+    return data;
+  },
+
+  // ════════════════════════════════════════
+  // GET USER DEPUIS LOCALSTORAGE
+  // ════════════════════════════════════════
+  getStoredUser: () => {
+    const stored = localStorage.getItem(TOKEN_KEYS.USER);
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  },
+
+  // ════════════════════════════════════════
+  // VERIFIER SI CONNECTE
+  // ════════════════════════════════════════
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem(TOKEN_KEYS.ACCESS);
   },
 };
+
+export default AuthService;

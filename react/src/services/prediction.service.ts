@@ -1,46 +1,79 @@
-import api from '../lib/api';
-import type {
-  Prediction,
+import api from "@/lib/api"
+import {
   PredictionInput,
-  PredictionUpdate,
-  PredictionsResponse,
-  ApiResponse,
-} from '../types';
+  PredictionUpdatePayload,
+  PredictionListResponse,
+  PredictionSingleResponse,
+} from "@/types"
 
-export const predictionService = {
-  // Créer une nouvelle prédiction
-  async create(data: PredictionInput): Promise<{ prediction: Prediction }> {
-    const response = await api.post('/api/predict', data);
-    return response.data;
+const PredictionService = {
+
+  // ════════════════════════════════════════
+  // NOUVELLE PRÉDICTION
+  // ════════════════════════════════════════
+  predict: async (
+    payload: PredictionInput
+  ): Promise<PredictionSingleResponse> => {
+    const { data } = await api.post<PredictionSingleResponse>(
+      "/api/predict",
+      payload
+    )
+    return data
   },
 
-  // Obtenir toutes les prédictions de l'utilisateur
-  async getAll(): Promise<PredictionsResponse> {
-    const response = await api.get('/api/predictions');
-    return response.data;
+  // ════════════════════════════════════════
+  // HISTORIQUE COMPLET
+  // ════════════════════════════════════════
+  getAll: async (): Promise<PredictionListResponse> => {
+    const { data } = await api.get<PredictionListResponse>(
+      "/api/predictions"
+    )
+    return data
   },
 
-  // Obtenir une prédiction par ID
-  async getById(id: string): Promise<{ prediction: Prediction }> {
-    const response = await api.get(`/api/predictions/${id}`);
-    return response.data;
+  // ════════════════════════════════════════
+  // UNE PRÉDICTION
+  // ════════════════════════════════════════
+  getOne: async (id: string): Promise<PredictionSingleResponse> => {
+    const { data } = await api.get<PredictionSingleResponse>(
+      `/api/predictions/${id}`
+    )
+    return data
   },
 
-  // Modifier une prédiction (label et/ou inputs pour recalcul)
-  async update(id: string, data: PredictionUpdate): Promise<{ prediction: Prediction }> {
-    const response = await api.patch(`/api/predictions/${id}`, data);
-    return response.data;
+  // ════════════════════════════════════════
+  // MODIFIER UNE PRÉDICTION
+  // ════════════════════════════════════════
+  update: async (
+    id: string,
+    payload: PredictionUpdatePayload
+  ): Promise<PredictionSingleResponse> => {
+    const { data } = await api.patch<PredictionSingleResponse>(
+      `/api/predictions/${id}`,
+      payload
+    )
+    return data
   },
 
-  // Supprimer une prédiction
-  async delete(id: string): Promise<ApiResponse> {
-    const response = await api.delete(`/api/predictions/${id}`);
-    return response.data;
+  // ════════════════════════════════════════
+  // SUPPRIMER UNE PRÉDICTION
+  // ════════════════════════════════════════
+  deleteOne: async (id: string): Promise<{ message: string }> => {
+    const { data } = await api.delete<{ success: boolean; message: string }>(
+      `/api/predictions/${id}`
+    )
+    return data
   },
 
-  // Supprimer toutes les prédictions
-  async deleteAll(): Promise<ApiResponse> {
-    const response = await api.delete('/api/predictions');
-    return response.data;
+  // ════════════════════════════════════════
+  // SUPPRIMER TOUTES LES PRÉDICTIONS
+  // ════════════════════════════════════════
+  deleteAll: async (): Promise<{ message: string }> => {
+    const { data } = await api.delete<{ success: boolean; message: string }>(
+      "/api/predictions"
+    )
+    return data
   },
-};
+}
+
+export default PredictionService

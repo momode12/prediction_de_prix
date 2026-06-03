@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, redirect
 from marshmallow import ValidationError
 from flask_jwt_extended import get_jwt_identity
 
@@ -229,12 +229,36 @@ def resend_verification(current_user):
       401:
         description: Non authentifié
     """
-    try:
-        result = EmailService.resend_verification(str(current_user.id))
-        return jsonify({"success": True, **result}), 200
-    except ValueError as e:
-        return jsonify({"success": False, "message": str(e)}), 400
+    body = request.get_json() or {}
+    email = body.get("email")
 
+    if not email:
+        return jsonify({
+            "success": False,
+            "message": "Email obligatoire."
+        }), 400
+
+    try:
+        from app.models.user import User
+        user = User.objects(email=email, is_active=True).first()
+        if not user:
+            return jsonify({
+                "success": False,
+                "message": "Aucun compte trouvé avec cet email."
+            }), 400
+        if user.is_verified:
+            return jsonify({
+                "success": False,
+                "message": "Email déjà vérifié."
+            }), 400
+
+        EmailService.send_verification(user)
+        return jsonify({
+            "success": True,
+            "message": "Email de vérification renvoyé."
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 # ════════════════════════════════════════
 # GET PROFIL
@@ -316,10 +340,14 @@ def update_profile(current_user):
       401:
         description: Non authentifié
     """
+    body = request.get_json() or {} # ← ajouter
+
     try:
-        data = update_schema.load(request.get_json() or {})
-    except ValidationError as e:
+        data = update_schema.load(body)  # ← ajouter
+    except ValidationError as e:  # ← ajouter
         return jsonify({"success": False, "errors": e.messages}), 400
+
+    data.pop("email", None)
 
     try:
         user = AuthService.update_profile(str(current_user.id), data)
@@ -330,7 +358,6 @@ def update_profile(current_user):
         }), 200
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
-
 
 # ════════════════════════════════════════
 # CHANGE PASSWORD

@@ -1,48 +1,54 @@
 from marshmallow import Schema, fields, validate, ValidationError, validates_schema
 
-# ── Valeurs acceptées (issues du notebook)
 TYPES_BIEN = [
     "Appartement", "Bungalow", "Chalet", "Duplex", "Ferme",
-    "Immeuble", "Maison coloniale", "Maison d'hôtes", "Maison de ville",
-    "Maison écologique", "Maison en briques", "Maison en bois",
+    "Immeuble", "Maison", "Maison coloniale", "Maison d'hôtes",
+    "Maison de ville", "Maison en bois", "Maison en briques",
     "Maison en terre", "Maison flottante", "Maison jumelée",
-    "Maison moderne", "Maison traditionnelle", "Penthouse",
-    "Studio", "Terrain", "Villa", "Villa moderne",
+    "Maison moderne", "Maison traditionnelle", "Maison écologique",
+    "Penthouse", "Studio", "Terrain", "Villa",
 ]
 
-ETATS_BIEN = ["Ancien", "À rénover", "Neuf", "Rénové", "Très bon état"]
+ETATS_BIEN = ["Ancien", "En construction", "Neuf", "Rénové", "À rénover"]
 
 REGIONS = [
     "Alaotra-Mangoro", "Amoron'i Mania", "Analamanga", "Analanjirofo",
     "Androy", "Anosy", "Atsimo-Andrefana", "Atsimo-Atsinanana",
     "Atsinanana", "Betsiboka", "Boeny", "Bongolava", "Diana",
-    "Haute Matsiatra", "Ihorombe", "Itasy", "Melaky", "Menabe",
-    "SAVA", "Sofia", "Vakinankaratra", "Vatovavy", "Vatovavy-Fitovinany",
-    "Ihorombe",
+    "Fitovinany", "Haute Matsiatra", "Ihorombe", "Itasy",
+    "Mangoky", "Melaky", "Menabe", "Sava", "Sofia",
+    "Vakinankaratra", "Vatovavy",
 ]
 
 QUARTIERS = [
     "Banlieue", "Centre-ville", "Quartier administratif",
-    "Quartier chic", "Quartier côtier", "Quartier commerçant",
+    "Quartier chic", "Quartier commerçant", "Quartier côtier",
     "Quartier diplomatique", "Quartier en développement",
-    "Quartier forestier", "Quartier historique", "Quartier industriel",
-    "Quartier minier", "Quartier périphérique", "Quartier populaire",
-    "Quartier portuaire", "Quartier résidentielle", "Quartier touristique",
-    "Quartier universitaire", "Zone agricole", "Zone rurale",
+    "Quartier forestier", "Quartier historique", "Quartier minier",
+    "Quartier populaire", "Quartier périphérique", "Quartier touristique",
+    "Quartier universitaire", "Zone agricole", "Zone industrielle",
+    "Zone portuaire", "Zone rurale", "Zone résidentielle",
 ]
 
 ACCESSIBILITES = [
-    "Chemin de terre", "Piste", "Route goudronnée",
-    "Route nationale", "Zone enclavée",
+    "Proche aéroport", "Proche gare routière", "Proche port",
+    "Route en terre", "Route goudronnée",
 ]
 
-POSITIONS = ["Extérieure", "Intérieure", "Partagée"]
+POSITIONS_DOUCHE = ["Aucune", "Extérieure", "Intérieure"]
+POSITIONS_WC = ["Aucun", "Extérieur", "Intérieur"]
 OUI_NON = ["Non", "Oui"]
-RACCORDE = ["Non raccordé", "Raccordé"]
 
+ELECTRICITE = ["Non raccordé", "Raccordé"]
+EAU_COURANTE = ["Non raccordée", "Raccordée"]
+
+
+from marshmallow import Schema, fields, validate, ValidationError, validates_schema, EXCLUDE
 
 class PredictionInputSchema(Schema):
-    """Validation des inputs avant envoi au modèle ML."""
+    
+    class Meta:
+        unknown = EXCLUDE  # ← ignore les champs inconnus au lieu de raise
 
     type_bien = fields.Str(
         required=True,
@@ -92,11 +98,11 @@ class PredictionInputSchema(Schema):
     )
     douche_position = fields.Str(
         required=True,
-        validate=validate.OneOf(POSITIONS)
+        validate=validate.OneOf(POSITIONS_DOUCHE)
     )
     wc_position = fields.Str(
         required=True,
-        validate=validate.OneOf(POSITIONS)
+        validate=validate.OneOf(POSITIONS_WC)
     )
     garage = fields.Str(
         required=True,
@@ -108,13 +114,12 @@ class PredictionInputSchema(Schema):
     )
     electricite = fields.Str(
         required=True,
-        validate=validate.OneOf(RACCORDE)
+        validate=validate.OneOf(ELECTRICITE)
     )
     eau_courante = fields.Str(
         required=True,
-        validate=validate.OneOf(RACCORDE)
+        validate=validate.OneOf(EAU_COURANTE)
     )
-    # Optionnel : label donné par l'user
     label = fields.Str(
         load_default=None,
         validate=validate.Length(max=100)
@@ -122,13 +127,11 @@ class PredictionInputSchema(Schema):
 
 
 class PredictionUpdateSchema(Schema):
-    """
-    CRUD prédiction — update.
-    On peut modifier le label et/ou les inputs pour recalculer.
-    """
-    label = fields.Str(validate=validate.Length(max=100))
 
-    # Tous les champs inputs redeviennent optionnels pour le PATCH
+    class Meta:
+        unknown = EXCLUDE  # ← ajouter
+
+    label = fields.Str(validate=validate.Length(max=100))
     type_bien = fields.Str(validate=validate.OneOf(TYPES_BIEN))
     surface_m2 = fields.Int(validate=validate.Range(min=10, max=10000))
     nb_chambres = fields.Int(validate=validate.Range(min=0, max=50))
@@ -139,18 +142,17 @@ class PredictionUpdateSchema(Schema):
     quartier = fields.Str(validate=validate.OneOf(QUARTIERS))
     prix_terrain_m2 = fields.Int(validate=validate.Range(min=1000, max=1_000_000))
     accessibilite = fields.Str(validate=validate.OneOf(ACCESSIBILITES))
-    douche_position = fields.Str(validate=validate.OneOf(POSITIONS))
-    wc_position = fields.Str(validate=validate.OneOf(POSITIONS))
+    douche_position = fields.Str(validate=validate.OneOf(POSITIONS_DOUCHE))
+    wc_position = fields.Str(validate=validate.OneOf(POSITIONS_WC))
     garage = fields.Str(validate=validate.OneOf(OUI_NON))
     jardin = fields.Str(validate=validate.OneOf(OUI_NON))
-    electricite = fields.Str(validate=validate.OneOf(RACCORDE))
-    eau_courante = fields.Str(validate=validate.OneOf(RACCORDE))
+    electricite = fields.Str(validate=validate.OneOf(ELECTRICITE))
+    eau_courante = fields.Str(validate=validate.OneOf(EAU_COURANTE))
 
     @validates_schema
     def at_least_one_field(self, data, **kwargs):
         if not data:
             raise ValidationError("Au moins un champ est requis pour la mise à jour.")
-
 
 class PredictionResponseSchema(Schema):
     """Sérialisation d'une prédiction pour la réponse API."""

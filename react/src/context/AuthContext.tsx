@@ -1,81 +1,112 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { User, LoginCredentials, RegisterCredentials } from '../types';
-import { authService } from '../services/auth.service';
-import { AuthContext } from './auth-context';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  ReactNode,
+} from "react"
+import { User, LoginPayload, RegisterPayload, TOKEN_KEYS } from "@/types"
+import AuthService from "@/services/auth.service"
 
-interface AuthProviderProps {
-  children: React.ReactNode;
+interface AuthContextType {
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  login: (payload: LoginPayload) => Promise<void>
+  register: (payload: RegisterPayload) => Promise<void>
+  logout: () => void
+  updateUser: (user: User) => void
+  clearAuth: () => void
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const AuthContext = createContext<AuthContextType | null>(null)
 
-  // 1. Initialisation au montage
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  // ── Fonction pour vider l’authentification
+  const clearAuth = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEYS.ACCESS)
+    localStorage.removeItem(TOKEN_KEYS.REFRESH)
+    localStorage.removeItem(TOKEN_KEYS.USER)
+    setUser(null)
+  }, [])
+
+  // ── Hydratation depuis localStorage
   useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('access_token');
-      const storedUser = localStorage.getItem('user');
+    const hydrateAuth = () => {
+      const stored = localStorage.getItem(TOKEN_KEYS.USER)
+      const token = localStorage.getItem(TOKEN_KEYS.ACCESS)
 
-      if (token && storedUser) {
+      if (stored && token) {
         try {
-          setUser(JSON.parse(storedUser));
+          const parsed = JSON.parse(stored)
+          setUser(parsed) // OK car appelé dans une fonction
         } catch {
-          localStorage.removeItem('user');
+          clearAuth()
         }
       }
-      setIsLoading(false);
-    };
+      setIsLoading(false)
+    }
 
-    initAuth();
-  }, []);
+    hydrateAuth()
+  }, [clearAuth])
 
-  // 2. Toutes les fonctions sont mémoïsées avec useCallback pour rester stables
-  const login = useCallback(async (credentials: LoginCredentials) => {
-    const response = await authService.login(credentials);
-    localStorage.setItem('access_token', response.access_token);
-    localStorage.setItem('refresh_token', response.refresh_token);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    setUser(response.user);
-  }, []);
+  const login = useCallback(async (payload: LoginPayload) => {
+    const data = await AuthService.login(payload)
+    if (!data.user.is_verified) {
+      throw new Error("EMAIL_NOT_VERIFIED")
+    }
+    setUser(data.user)
+    localStorage.setItem(TOKEN_KEYS.USER, JSON.stringify(data.user))
+    localStorage.setItem(TOKEN_KEYS.ACCESS, data.access_token)
+    localStorage.setItem(TOKEN_KEYS.REFRESH, data.refresh_token)
+  }, [])
 
-  const register = useCallback(async (credentials: RegisterCredentials) => {
-    await authService.register(credentials);
-  }, []);
+  const register = useCallback(async (payload: RegisterPayload) => {
+    await AuthService.register(payload)
+  }, [])
 
   const logout = useCallback(() => {
-    authService.logout();
-    setUser(null);
-  }, []);
+    AuthService.logout()
+    clearAuth()
+  }, [clearAuth])
 
   const updateUser = useCallback((updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-  }, []);
+    setUser(updatedUser)
+    localStorage.setItem(TOKEN_KEYS.USER, JSON.stringify(updatedUser))
+  }, [])
 
-  const refreshUser = useCallback(async () => {
-    try {
-      const response = await authService.getProfile();
-      setUser(response.user);
-      localStorage.setItem('user', JSON.stringify(response.user));
-    } catch (error) {
-      console.error('Erreur lors du rafraîchissement du profil:', error);
-    }
-  }, []);
+  // ── useMemo pour éviter le re-render du context à chaque render
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      login,
+      register,
+      logout,
+      updateUser,
+      clearAuth,
+    }),
+    [user, isLoading, login, register, logout, updateUser, clearAuth]
+  )
 
-  // 3. L'objet value ne sera recalculé que si ces dépendances changent.
-  // Comme les fonctions sont stables (useCallback), il ne recalculera 
-  // réellement que lorsque 'user' ou 'isLoading' changera.
-  const value = useMemo(() => ({
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    register,
-    logout,
-    updateUser,
-    refreshUser,
-  }), [user, isLoading, login, register, logout, updateUser, refreshUser]);
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+// eslint-disable-next-line react-refresh/only-export-components
+export function useAuthContext(): AuthContextType {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error("useAuthContext doit être utilisé dans AuthProvider")
+  }
+  return context
+}

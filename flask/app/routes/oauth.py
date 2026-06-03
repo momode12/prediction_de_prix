@@ -81,13 +81,21 @@ def google_callback():
     """
     code = request.args.get("code")
     if not code:
-        return jsonify({
-            "success": False,
-            "message": "Code d'autorisation manquant."
-        }), 400
+        return redirect(f"http://localhost:5173/login?error=missing_code")
 
     try:
         result = OAuthService.google_callback(code)
-        return jsonify({"success": True, **result}), 200
+        # ── Rediriger vers le frontend avec les tokens dans l'URL
+        access = result["access_token"]
+        refresh = result["refresh_token"]
+        user = result["user"]
+        import json, urllib.parse
+        user_encoded = urllib.parse.quote(json.dumps(user))
+        return redirect(
+            f"http://localhost:5173/oauth/callback"
+            f"?access_token={access}"
+            f"&refresh_token={refresh}"
+            f"&user={user_encoded}"
+        )
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return redirect(f"http://localhost:5173/login?error={str(e)}")

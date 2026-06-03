@@ -1,0 +1,12 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-tailwindcss"
+  ],
+  "rules": {
+    "at-rule-no-unknown": null,
+    "no-empty-source": null,
+    "block-no-empty": true,
+    "color-no-invalid-hex": true
+  }
+}
