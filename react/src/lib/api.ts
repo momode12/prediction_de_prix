@@ -1,9 +1,9 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000';
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,7 +37,7 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           // Tenter de rafraîchir le token
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+          const response = await axios.post(`${BASE_URL}/auth/refresh`, {}, {
             headers: {
               Authorization: `Bearer ${refreshToken}`,
             },

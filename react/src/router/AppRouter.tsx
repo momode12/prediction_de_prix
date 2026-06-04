@@ -5,6 +5,7 @@ import { LoginPage, RegisterPage, VerifyEmailPage } from "@/pages/auth"
 import { ProfilePage } from "@/pages/account"
 import { PredictionPage } from "@/pages/predictions"
 import { OAuthCallbackPage } from "@/pages/auth"
+import { AdminPage } from "@/pages/admin"
 
 const AppRouter = () => {
   return (
@@ -25,6 +26,7 @@ const AppRouter = () => {
 
           {/* ── Routes privées (redirigent vers /login si non connecté) */}
           <Route element={<PrivateRoute />}>
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="/predictions" element={<PredictionPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>

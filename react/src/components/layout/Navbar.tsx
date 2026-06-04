@@ -1,19 +1,20 @@
 import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 import {
-  Home,
-  User,
-  LogOut,
-  Menu,
-  X,
-  TrendingUp,
+  Home, User, LogOut, Menu, X,
+  TrendingUp, Shield,
 } from "lucide-react"
 import useAuth from "@/hooks/useAuth"
+
+// ── Même username que AdminPage
+const ADMIN_USERNAME = "heritiana_julien"
 
 const Navbar = () => {
   const { user, handleLogout } = useAuth()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const isAdmin = user?.username === ADMIN_USERNAME
 
   const navLinks = [
     {
@@ -26,10 +27,18 @@ const Navbar = () => {
       label: "Mon compte",
       icon: <User size={18} />,
     },
+    // ── Lien admin visible uniquement pour toi
+    ...(isAdmin
+      ? [{
+          to: "/admin",
+          label: "Admin",
+          icon: <Shield size={18} />,
+          isAdmin: true,
+        }]
+      : []),
   ]
 
-  const isActive = (path: string) =>
-    location.pathname === path
+  const isActive = (path: string) => location.pathname === path
 
   return (
     <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-40">
@@ -37,10 +46,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
 
           {/* ── Logo */}
-          <Link
-            to="/predictions"
-            className="flex items-center gap-2 group"
-          >
+          <Link to="/predictions" className="flex items-center gap-2 group">
             <div className="w-8 h-8 bg-primary-600 rounded-lg
                             flex items-center justify-center
                             group-hover:bg-primary-700 transition-colors">
@@ -60,9 +66,13 @@ const Navbar = () => {
                 className={`
                   flex items-center gap-2 px-4 py-2 rounded-lg
                   text-sm font-medium transition-all duration-200
-                  ${isActive(link.to)
-                    ? "bg-primary-50 text-primary-700"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  ${"isAdmin" in link && link.isAdmin
+                    ? isActive(link.to)
+                      ? "bg-primary-600 text-white"
+                      : "bg-primary-50 text-primary-700 hover:bg-primary-100"
+                    : isActive(link.to)
+                      ? "bg-primary-50 text-primary-700"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                   }
                 `}
               >
@@ -74,11 +84,13 @@ const Navbar = () => {
 
           {/* ── Desktop user + logout */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Avatar + nom */}
+            {/* Avatar + nom + badge admin */}
             <div className="flex items-center gap-2 px-3 py-1.5
                             bg-gray-50 rounded-lg border border-gray-200">
-              <div className="w-7 h-7 bg-primary-600 rounded-full
-                              flex items-center justify-center">
+              <div className={`
+                w-7 h-7 rounded-full flex items-center justify-center
+                ${isAdmin ? "bg-primary-600" : "bg-gray-400"}
+              `}>
                 <span className="text-white text-xs font-bold uppercase">
                   {user?.username?.charAt(0) ?? "U"}
                 </span>
@@ -86,9 +98,17 @@ const Navbar = () => {
               <span className="text-sm font-medium text-gray-700">
                 {user?.username}
               </span>
+              {isAdmin && (
+                <span className="flex items-center gap-1 bg-primary-600
+                                 text-white text-xs font-semibold
+                                 px-2 py-0.5 rounded-full">
+                  <Shield size={10} />
+                  Admin
+                </span>
+              )}
             </div>
 
-            {/* Bouton logout */}
+            {/* Logout */}
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-2 rounded-lg
@@ -119,17 +139,30 @@ const Navbar = () => {
           {/* User info */}
           <div className="flex items-center gap-3 px-3 py-3
                           mb-2 bg-gray-50 rounded-xl">
-            <div className="w-9 h-9 bg-primary-600 rounded-full
-                            flex items-center justify-center flex-shrink-0">
+            <div className={`
+              w-9 h-9 rounded-full flex items-center
+              justify-center flex-shrink-0
+              ${isAdmin ? "bg-primary-600" : "bg-gray-400"}
+            `}>
               <span className="text-white text-sm font-bold uppercase">
                 {user?.username?.charAt(0) ?? "U"}
               </span>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {user?.username}
-              </p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {user?.username}
+                </p>
+                {isAdmin && (
+                  <span className="flex items-center gap-1 bg-primary-600
+                                   text-white text-xs font-semibold
+                                   px-2 py-0.5 rounded-full flex-shrink-0">
+                    <Shield size={10} />
+                    Admin
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
           </div>
 
@@ -142,9 +175,13 @@ const Navbar = () => {
               className={`
                 flex items-center gap-3 px-3 py-2.5 rounded-lg
                 text-sm font-medium transition-all duration-200
-                ${isActive(link.to)
-                  ? "bg-primary-50 text-primary-700"
-                  : "text-gray-600 hover:bg-gray-100"
+                ${"isAdmin" in link && link.isAdmin
+                  ? isActive(link.to)
+                    ? "bg-primary-600 text-white"
+                    : "bg-primary-50 text-primary-700"
+                  : isActive(link.to)
+                    ? "bg-primary-50 text-primary-700"
+                    : "text-gray-600 hover:bg-gray-100"
                 }
               `}
             >

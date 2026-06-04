@@ -19,7 +19,75 @@ login_schema = LoginSchema()
 update_schema = UpdateUserSchema()
 change_pw_schema = ChangePasswordSchema()
 user_response_schema = UserResponseSchema()
+ADMIN_USERNAME = "heritiana_julien"
 
+@auth_bp.route("/admin/users", methods=["GET"])
+@require_auth
+def admin_list_users(current_user):
+    """
+    Liste tous les utilisateurs — admin uniquement.
+    ---
+    tags:
+      - Admin
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Liste des utilisateurs
+      403:
+        description: Accès refusé
+    """
+    if current_user.username != ADMIN_USERNAME:
+        return jsonify({"success": False, "message": "Accès refusé."}), 403
+
+    users = AuthService.list_users()
+    return jsonify({
+        "success": True,
+        "count": len(users),
+        "users": user_response_schema.dump(users, many=True)
+    }), 200
+
+
+# ════════════════════════════════════════
+# ADMIN — DELETE USER
+# ════════════════════════════════════════
+@auth_bp.route("/admin/users/<user_id>", methods=["DELETE"])
+@require_auth
+def admin_delete_user(current_user, user_id):
+    """
+    Supprime un utilisateur — admin uniquement.
+    ---
+    tags:
+      - Admin
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        required: true
+        type: string
+    responses:
+      200:
+        description: Utilisateur supprimé
+      403:
+        description: Accès refusé
+      400:
+        description: Utilisateur introuvable
+    """
+    if current_user.username != ADMIN_USERNAME:
+        return jsonify({"success": False, "message": "Accès refusé."}), 403
+
+    if str(current_user.id) == user_id:
+        return jsonify({
+            "success": False,
+            "message": "Vous ne pouvez pas supprimer votre propre compte."
+        }), 400
+
+    try:
+        result = AuthService.delete_account(user_id)
+        return jsonify({"success": True, **result}), 200
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
 
 # ════════════════════════════════════════
 # REGISTER
